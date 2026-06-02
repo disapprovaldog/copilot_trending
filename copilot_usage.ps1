@@ -21,15 +21,20 @@
 # Without Starship the status is prepended to your existing prompt automatically.
 # ───────────────────────────────────────────────────────────────────────────
 
-$script:_CopilotCacheDir    = Join-Path $HOME ".cache" "copilot_usage"
-$script:_CopilotRefreshSecs = 300
-$script:_CopilotJobId       = $null
-$script:_CopilotPython      = if     (Get-Command python3  -ErrorAction SilentlyContinue) { "python3"  }
-                               elseif (Get-Command python   -ErrorAction SilentlyContinue) { "python"   }
-                               else                                                         { $null      }
+$global:_CopilotCacheDir    = Join-Path (Join-Path $HOME ".cache") "copilot_usage"
+$global:_CopilotRefreshSecs = 300
+$global:_CopilotJobId       = $null
+$global:_CopilotPython      = $null
+foreach ($_pyCandidate in @('python3', 'python', 'py')) {
+    if (Get-Command $_pyCandidate -ErrorAction SilentlyContinue) {
+        $testOut = & $_pyCandidate -c "print('ok')" 2>&1
+        if ("$testOut" -match 'ok') { $global:_CopilotPython = $_pyCandidate; break }
+    }
+}
+Remove-Variable _pyCandidate -ErrorAction SilentlyContinue
 
 # ── embedded Python — same computation logic as the zsh version ─────────────
-$script:_CopilotPyScript = @'
+$global:_CopilotPyScript = @'
 import sys, json, os
 from datetime import datetime, timedelta
 
@@ -150,9 +155,9 @@ with open(os.path.join(cache_dir, "detail.txt"), "w", encoding="utf-8") as fh:
 # ── internal: fetch API + compute projection, write cache files ─────────────
 function _Copilot-Fetch {
     param(
-        [string]$CacheDir = $script:_CopilotCacheDir,
-        [string]$Python   = $script:_CopilotPython,
-        [string]$PyScript = $script:_CopilotPyScript
+        [string]$CacheDir = $global:_CopilotCacheDir,
+        [string]$Python   = $global:_CopilotPython,
+        [string]$PyScript = $global:_CopilotPyScript
     )
 
     if (-not $Python) {
@@ -194,18 +199,18 @@ function _Copilot-Fetch {
     } finally {
         Remove-Item -Path $tmpPy -Force -ErrorAction SilentlyContinue
     }
-    return $true
+    return (Test-Path (Join-Path $CacheDir "prompt.txt"))
 }
 
 # ── public: human-readable summary ───────────────────────────────────────────
 function Get-CopilotUsageInfo {
-    $detailFile = Join-Path $script:_CopilotCacheDir "detail.txt"
+    $detailFile = Join-Path $global:_CopilotCacheDir "detail.txt"
     if (-not (Test-Path $detailFile)) {
-        Write-Host "No cached data yet — run: Update-CopilotUsage"
+        Write-Host "No cached data yet - run: Update-CopilotUsage"
         return
     }
     Get-Content $detailFile
-    $lastFetchFile = Join-Path $script:_CopilotCacheDir "last_fetch"
+    $lastFetchFile = Join-Path $global:_CopilotCacheDir "last_fetch"
     if (Test-Path $lastFetchFile) {
         $epoch = [long](Get-Content $lastFetchFile -Raw)
         $dt = [System.DateTimeOffset]::FromUnixTimeSeconds($epoch).LocalDateTime
@@ -216,7 +221,7 @@ Set-Alias copilot_usage_info Get-CopilotUsageInfo
 
 # ── public: force a synchronous refresh ──────────────────────────────────────
 function Update-CopilotUsage {
-    Write-Host "Fetching GitHub Copilot usage…"
+    Write-Host "Fetching GitHub Copilot usage..."
     if (_Copilot-Fetch) {
         $promptFile = Join-Path $script:_CopilotCacheDir "prompt.txt"
         if (Test-Path $promptFile) { Get-Content $promptFile -Raw | Write-Host }
@@ -226,28 +231,28 @@ Set-Alias copilot_usage_update Update-CopilotUsage
 
 # ── internal: fire a background refresh job when cache is stale ──────────────
 function _Copilot-CheckRefresh {
-    if ($script:_CopilotJobId) {
-        $job = Get-Job -Id $script:_CopilotJobId -ErrorAction SilentlyContinue
+    if ($global:_CopilotJobId) {
+        $job = Get-Job -Id $global:_CopilotJobId -ErrorAction SilentlyContinue
         if ($job -and $job.State -in @('Completed', 'Failed', 'Stopped')) {
-            Remove-Job -Id $script:_CopilotJobId -ErrorAction SilentlyContinue
-            $script:_CopilotJobId = $null
+            Remove-Job -Id $global:_CopilotJobId -ErrorAction SilentlyContinue
+            $global:_CopilotJobId = $null
         } else {
             return  # still running
         }
     }
 
-    $lastFetchFile = Join-Path $script:_CopilotCacheDir "last_fetch"
+    $lastFetchFile = Join-Path $global:_CopilotCacheDir "last_fetch"
     $lastFetch = 0
     if (Test-Path $lastFetchFile) {
         $lastFetch = [long](Get-Content $lastFetchFile -Raw)
     }
-    if (([System.DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - $lastFetch) -le $script:_CopilotRefreshSecs) {
+    if (([System.DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - $lastFetch) -le $global:_CopilotRefreshSecs) {
         return
     }
 
-    $cd  = $script:_CopilotCacheDir
-    $py  = $script:_CopilotPython
-    $pys = $script:_CopilotPyScript
+    $cd  = $global:_CopilotCacheDir
+    $py  = $global:_CopilotPython
+    $pys = $global:_CopilotPyScript
 
     if (-not $py) { return }
 
@@ -283,37 +288,59 @@ function _Copilot-CheckRefresh {
         }
     } -ArgumentList $cd, $py, $pys
 
-    $script:_CopilotJobId = $job.Id
+    $global:_CopilotJobId = $job.Id
+}
+
+# ── seed cache on first load if missing ──────────────────────────────────────
+$global:_CopilotPromptFile = Join-Path $global:_CopilotCacheDir "prompt.txt"
+if (-not (Test-Path $global:_CopilotPromptFile) -and -not $global:_CopilotSeeded) {
+    $global:_CopilotSeeded = $true
+    Write-Host "copilot_usage: seeding cache..." -NoNewline
+    if (_Copilot-Fetch) {
+        Write-Host " done"
+    } else {
+        Write-Host " failed - run: Update-CopilotUsage"
+    }
 }
 
 # ── prompt hook: inject refresh trigger + status display ─────────────────────
-if (-not $script:_CopilotPromptInstalled) {
-    $script:_CopilotPromptInstalled = $true
+if (-not $global:_CopilotPromptInstalled) {
+    $global:_CopilotPromptInstalled = $true
 
     # Detect if Starship is driving the prompt — if so, skip display injection
     # (Starship reads prompt.txt directly via the custom.copilot block)
-    $script:_CopilotHasStarship = (Get-Command starship -ErrorAction SilentlyContinue) -and
-        ((Get-Item Function:prompt -ErrorAction SilentlyContinue)?.ScriptBlock -match 'starship')
+    $existing = Get-Item Function:prompt -ErrorAction SilentlyContinue
+    $global:_CopilotHasStarship = (Get-Command starship -ErrorAction SilentlyContinue) -and
+        $existing -and ($existing.ScriptBlock -match 'starship')
 
-    if ($script:_CopilotHasStarship) {
-        $script:_CopilotOrigPrompt = (Get-Item Function:prompt).ScriptBlock
+    if ($global:_CopilotHasStarship) {
+        $global:_CopilotOrigPrompt = (Get-Item Function:prompt).ScriptBlock
         function global:prompt {
             _Copilot-CheckRefresh
-            & $script:_CopilotOrigPrompt
+            & $global:_CopilotOrigPrompt
         }
     } else {
-        $script:_CopilotOrigPrompt = if (Test-Path Function:prompt) {
+        $global:_CopilotOrigPrompt = if (Test-Path Function:prompt) {
             (Get-Item Function:prompt).ScriptBlock
         } else {
             { "PS $($executionContext.SessionState.Path.CurrentLocation)$('>' * ($nestedPromptLevel + 1)) " }
         }
         function global:prompt {
             _Copilot-CheckRefresh
-            $promptFile = Join-Path $script:_CopilotCacheDir "prompt.txt"
-            $status = if (Test-Path $promptFile) {
-                (Get-Content $promptFile -Raw).Trim()
+            $status = if (Test-Path $global:_CopilotPromptFile) {
+                $s = (Get-Content $global:_CopilotPromptFile -Raw -Encoding UTF8).Trim()
+                if ($PSVersionTable.PSVersion.Major -lt 7) {
+                    $s = $s.Replace([char]::ConvertFromUtf32(0x1F7E2), '[G]').
+                            Replace([char]::ConvertFromUtf32(0x1F7E1), '[Y]').
+                            Replace([char]::ConvertFromUtf32(0x1F7E0), '[O]').
+                            Replace([char]::ConvertFromUtf32(0x1F534), '[R]').
+                            Replace([string][char]0x2197, '->').
+                            Replace([string][char]0x267E, '~').
+                            Replace([string][char]0xFE0F, '')
+                }
+                $s
             } else { $null }
-            $orig = & $script:_CopilotOrigPrompt
+            $orig = & $global:_CopilotOrigPrompt
             if ($status) { "$status $orig" } else { $orig }
         }
     }

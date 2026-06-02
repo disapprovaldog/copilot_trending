@@ -8,6 +8,46 @@ This repo contains sourceable shell scripts (Zsh and PowerShell) that:
 - compute monthly usage projection using business hours only (M-F, 8a-5p)
 - write a compact status string for the shell prompt (Starship or built-in)
 
+---
+
+## Reading the prompt indicator
+
+### PowerShell 7 (emoji)
+
+```
+🟢 717/12000 (6%) ↗ 11084 PS C:\Users\you>
+```
+
+### PowerShell 5 (ASCII fallback)
+
+```
+[G] 717/12000 (6%) -> 11084 PS C:\Users\you>
+```
+
+| Part | Meaning |
+|---|---|
+| `🟢` / `[G]` | Status icon — see colour key below |
+| `717` | Premium interactions used so far this month |
+| `12000` | Monthly entitlement |
+| `(6%)` | Percent of quota consumed |
+| `↗ 11084` / `-> 11084` | Projected end-of-month total, based on your current pace during business hours |
+
+**Colour key**
+
+| Emoji | ASCII | Used |
+|---|---|---|
+| 🟢 | `[G]` | < 50 % |
+| 🟡 | `[Y]` | 50 – 74 % |
+| 🟠 | `[O]` | 75 – 89 % |
+| 🔴 | `[R]` | ≥ 90 % |
+| ♾️ | `[~]` | Unlimited (no quota configured) |
+
+**Projection methodology:** usage rate is calculated as *interactions used ÷ business hours elapsed* (M-F, 08:00–17:00 local). That rate is multiplied by total business hours in the billing month to produce the projected total. The projection is omitted on the first morning of the month before any business hours have elapsed.
+
+The cache refreshes in the background every 5 minutes (triggered on each prompt draw). The displayed numbers are at most 5 minutes stale.
+
+---
+
 ## Files
 
 | File | Purpose |
@@ -61,9 +101,15 @@ style   = "bold cyan"
 ### Requirements
 
 - `gh` authenticated (`gh auth login`)
-- `python3` (or `python`)
+- `python3` (or `python` / `py`) — Windows Store stubs are detected and skipped automatically
 - PowerShell 5.1+ or PowerShell 7 (pwsh)
 - Starship (optional — if absent, status is prepended to the built-in prompt)
+
+### PS5 vs PS7
+
+Both versions are supported with the same script. PS7 displays emoji; PS5 uses ASCII equivalents (`[G]`, `[Y]`, `[O]`, `[R]`, `->`) because the legacy console host does not reliably render characters outside the Basic Multilingual Plane.
+
+If you load the script from multiple profile files (e.g. `profile.ps1` and `Microsoft.PowerShell_profile.ps1`), it is safe — the script uses global guards to seed the cache and install the prompt hook only once per session.
 
 ### Manual
 
@@ -94,20 +140,22 @@ style   = "bold cyan"
 ./install_copilot_usage.ps1
 ```
 
+> The installer adds the dot-source line to `$PROFILE.CurrentUserAllHosts`. If you want it in a host-specific profile instead, add it manually and leave the AllHosts profile empty.
+
 ---
 
 ## Commands (both shells)
 
 | Command | Description |
 |---|---|
-| `copilot_usage_update` | Force a synchronous refresh and print status |
-| `copilot_usage_info` | Print full detail from cache |
+| `copilot_usage_update` / `Update-CopilotUsage` | Force a synchronous refresh and print current status |
+| `copilot_usage_info` / `Get-CopilotUsageInfo` | Print full detail report from cache |
 
-PowerShell also exposes the verb-noun forms: `Update-CopilotUsage`, `Get-CopilotUsageInfo`.
+---
 
 ## Cache files
 
-Both scripts share `~/.cache/copilot_usage/`:
+All scripts share `~/.cache/copilot_usage/`:
 
 | File | Contents |
 |---|---|

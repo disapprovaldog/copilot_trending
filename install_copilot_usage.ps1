@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Idempotent installer for copilot_usage.ps1 — updates $PROFILE and (optionally) starship.toml.
@@ -59,13 +59,13 @@ if (Test-Path (Split-Path $StarshipToml)) {
     $StartMarker = "# >>> copilot_usage_start >>>"
     $EndMarker   = "# <<< copilot_usage_end <<<"
 
-    # Use "pwsh" for PowerShell 7+; change to "powershell" for Windows PS 5.1
+    $psExe = if ($PSVersionTable.PSVersion.Major -ge 7) { "pwsh" } else { "powershell" }
     $Block = @"
 [custom.copilot]
 command = "Get-Content \"`$HOME/.cache/copilot_usage/prompt.txt\""
 when    = "if (-not (Test-Path \"`$HOME/.cache/copilot_usage/prompt.txt\")) { exit 1 }"
-shell   = ["pwsh", "-NoProfile", "-NonInteractive", "-Command"]
-format  = "[\$output](\$style) "
+shell   = ["$psExe", "-NoProfile", "-NonInteractive", "-Command"]
+format  = "[`$output](`$style) "
 style   = "bold cyan"
 "@
 
