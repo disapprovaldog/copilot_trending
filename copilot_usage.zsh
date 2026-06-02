@@ -1,6 +1,11 @@
 # copilot_usage.zsh — GitHub Copilot usage tracking + Starship prompt
 # Source in ~/.zshrc:  source /path/to/copilot_usage.zsh
 #
+# NOTE: Quota tracking only has meaning if your GitHub organization has
+# configured a Copilot usage quota. Without an org-level quota the API
+# returns no entitlement data and the prompt shows "unlimited" regardless
+# of actual consumption.
+#
 # Requirements: gh (authenticated), python3, curl
 #
 # ─── Starship setup ────────────────────────────────────────────────────────
