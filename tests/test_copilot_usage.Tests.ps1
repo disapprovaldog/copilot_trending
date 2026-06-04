@@ -135,7 +135,7 @@ Describe "_Copilot-Fetch" {
         $result = _Copilot-Fetch -CacheDir $script:TestCacheDir `
                                   -Python "" `
                                   -PyScript $global:_CopilotPyScript `
-                                  -ErrorAction Ignore
+                                  -ErrorAction Ignore 2>$null
         $result | Should -Be $false
     }
 }
