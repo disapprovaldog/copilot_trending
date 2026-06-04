@@ -154,6 +154,7 @@ with open(os.path.join(cache_dir, "detail.txt"), "w", encoding="utf-8") as fh:
 
 # ── internal: fetch API + compute projection, write cache files ─────────────
 function _Copilot-Fetch {
+    [CmdletBinding()]
     param(
         [string]$CacheDir = $global:_CopilotCacheDir,
         [string]$Python   = $global:_CopilotPython,

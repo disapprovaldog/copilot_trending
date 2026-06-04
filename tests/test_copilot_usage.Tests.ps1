@@ -130,10 +130,12 @@ Describe "Embedded Python script (_CopilotPyScript)" {
 
 Describe "_Copilot-Fetch" {
     It "returns false when python is not configured" {
-        # Empty string triggers the early-exit guard without touching gh or the API
+        # Empty string triggers the early-exit guard without touching gh or the API.
+        # -ErrorAction Ignore suppresses the Write-Error so Pester does not fail this block.
         $result = _Copilot-Fetch -CacheDir $script:TestCacheDir `
                                   -Python "" `
-                                  -PyScript $global:_CopilotPyScript
+                                  -PyScript $global:_CopilotPyScript `
+                                  -ErrorAction Ignore
         $result | Should -Be $false
     }
 }
