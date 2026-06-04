@@ -64,7 +64,7 @@ def parse_iso(s):
 raw_file  = sys.argv[1]
 cache_dir = sys.argv[2]
 
-with open(raw_file, encoding='utf-8') as fh:
+with open(raw_file, encoding='utf-8-sig') as fh:
     raw = json.load(fh)
 
 plan      = raw.get("copilot_plan", "unknown")
@@ -154,6 +154,7 @@ with open(os.path.join(cache_dir, "detail.txt"), "w", encoding="utf-8") as fh:
 
 # ── internal: fetch API + compute projection, write cache files ─────────────
 function _Copilot-Fetch {
+    [CmdletBinding()]
     param(
         [string]$CacheDir = $global:_CopilotCacheDir,
         [string]$Python   = $global:_CopilotPython,
@@ -161,7 +162,7 @@ function _Copilot-Fetch {
     )
 
     if (-not $Python) {
-        Write-Error "copilot_usage: python3/python not found in PATH"
+        Write-Error "copilot_usage: python3/python not found in PATH" -ErrorAction Continue
         return $false
     }
 
@@ -169,7 +170,7 @@ function _Copilot-Fetch {
 
     $token = (gh auth token 2>$null)
     if ($LASTEXITCODE -ne 0 -or -not $token) {
-        Write-Error "copilot_usage: gh not authenticated"
+        Write-Error "copilot_usage: gh not authenticated" -ErrorAction Continue
         return $false
     }
 
@@ -183,7 +184,7 @@ function _Copilot-Fetch {
         $raw = Invoke-RestMethod -Uri "https://api.github.com/copilot_internal/user" `
             -Headers $headers -Method Get
     } catch {
-        Write-Error "copilot_usage: API request failed: $_"
+        Write-Error "copilot_usage: API request failed: $_" -ErrorAction Continue
         return $false
     }
 

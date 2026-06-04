@@ -132,9 +132,8 @@ if quota:
     elif pct_used < 90:  icon = "🟠"
     else:                icon = "🔴"
 
-    # Compact prompt string consumed by Starship
-    # zsh prompt rendering treats '%' as a prompt escape, so store it escaped.
-    pct_used_prompt = f"{pct_used:.1f}%%"
+    # Compact prompt string consumed by Starship (via cat; no escaping needed)
+    pct_used_prompt = f"{pct_used:.1f}%"
     if biz_elapsed > 0:
         prompt = f"{icon} {used}/{entitlement} ({pct_used_prompt}) ↗ {projected:.0f}"
     else:
@@ -166,7 +165,7 @@ else:
     ])
 
 with open(os.path.join(cache_dir, "prompt.txt"), "w") as fh:
-    fh.write(prompt)
+    fh.write(prompt.replace('%', '%%'))  # zsh prompt expansion renders %% as %
 with open(os.path.join(cache_dir, "detail.txt"), "w") as fh:
     fh.write(detail + "\n")
 PYEOF
@@ -190,6 +189,7 @@ copilot_usage_info() {
 copilot_usage_update() {
   print "Fetching GitHub Copilot usage…"
   if _copilot_usage_fetch; then
+    local prompt_str
     local prompt_str
     prompt_str="$(< "$_COPILOT_CACHE_DIR/prompt.txt")"
     print "${prompt_str//\%\%/%}"
