@@ -122,5 +122,15 @@ style   = "bold cyan"'
 upsert_managed_block "$STARSHIP_TOML" "$START_MARKER" "$END_MARKER" "$STARSHIP_BLOCK"
 echo "Updated custom.copilot block in $STARSHIP_TOML"
 
+if command -v zsh >/dev/null 2>&1; then
+  if zsh -fc "source '$COPILOT_SCRIPT' && copilot_usage_update" >/dev/null 2>&1; then
+    echo "Refreshed Copilot usage cache"
+  else
+    echo "Could not refresh Copilot usage cache right now"
+  fi
+else
+  echo "zsh not found — skipping cache refresh"
+fi
+
 echo
 echo "Done. Reload your shell with: exec zsh"

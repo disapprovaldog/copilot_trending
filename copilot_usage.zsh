@@ -133,10 +133,12 @@ if quota:
     else:                icon = "🔴"
 
     # Compact prompt string consumed by Starship
+    # zsh prompt rendering treats '%' as a prompt escape, so store it escaped.
+    pct_used_prompt = f"{pct_used:.1f}%%"
     if biz_elapsed > 0:
-        prompt = f"{icon} {used}/{entitlement} ({pct_used:.0f}%) ↗ {projected:.0f}"
+        prompt = f"{icon} {used}/{entitlement} ({pct_used_prompt}) ↗ {projected:.0f}"
     else:
-        prompt = f"{icon} {used}/{entitlement} ({pct_used:.0f}%)"
+        prompt = f"{icon} {used}/{entitlement} ({pct_used_prompt})"
 
     # Full detail for copilot_usage_info
     detail = "\n".join([
@@ -188,7 +190,9 @@ copilot_usage_info() {
 copilot_usage_update() {
   print "Fetching GitHub Copilot usage…"
   if _copilot_usage_fetch; then
-    print "$(< "$_COPILOT_CACHE_DIR/prompt.txt")"
+    local prompt_str
+    prompt_str="$(< "$_COPILOT_CACHE_DIR/prompt.txt")"
+    print "${prompt_str//\%\%/%}"
   fi
 }
 
