@@ -64,7 +64,7 @@ def parse_iso(s):
 raw_file  = sys.argv[1]
 cache_dir = sys.argv[2]
 
-with open(raw_file, encoding='utf-8') as fh:
+with open(raw_file, encoding='utf-8-sig') as fh:
     raw = json.load(fh)
 
 plan      = raw.get("copilot_plan", "unknown")

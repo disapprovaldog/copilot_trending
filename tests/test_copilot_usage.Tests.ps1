@@ -88,7 +88,7 @@ Describe "Embedded Python script (_CopilotPyScript)" {
         $tmpPy = [System.IO.Path]::GetTempFileName() + ".py"
         Set-Content $tmpPy $global:_CopilotPyScript -Encoding UTF8
         try {
-            & $python $tmpPy $rawJsonPath $script:TestCacheDir 2>&1 | Out-Null
+            & $python $tmpPy $rawJsonPath $script:TestCacheDir 2>$null | Out-Null
         } finally {
             Remove-Item $tmpPy -Force -ErrorAction SilentlyContinue
         }
@@ -117,7 +117,7 @@ Describe "Embedded Python script (_CopilotPyScript)" {
         $tmpPy = [System.IO.Path]::GetTempFileName() + ".py"
         Set-Content $tmpPy $global:_CopilotPyScript -Encoding UTF8
         try {
-            & $python $tmpPy $rawJsonPath $script:TestCacheDir 2>&1 | Out-Null
+            & $python $tmpPy $rawJsonPath $script:TestCacheDir 2>$null | Out-Null
         } finally {
             Remove-Item $tmpPy -Force -ErrorAction SilentlyContinue
         }
