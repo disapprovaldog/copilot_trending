@@ -115,11 +115,11 @@ class TestComputeUsage:
         raw = self._quota_raw(used=123, entitlement=500)
         assert "123/500" in compute_usage(raw, self._NOW)["prompt"]
 
-    def test_prompt_uses_double_percent_for_zsh_escaping(self):
+    def test_prompt_contains_single_percent(self):
         raw = self._quota_raw(used=600, entitlement=1000)
         prompt = compute_usage(raw, self._NOW)["prompt"]
-        assert "%%" in prompt
-        assert "60.0%%" in prompt
+        assert "60.0%" in prompt
+        assert "%%" not in prompt
 
     def test_projection_shown_mid_month(self):
         raw = self._quota_raw(used=300, entitlement=1000)

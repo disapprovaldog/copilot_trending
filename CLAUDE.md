@@ -45,7 +45,7 @@ The Zsh version passes raw JSON inline to Python via a heredoc. The PowerShell v
 
 ## Key invariants
 
-- `prompt.txt` stores the percent as `%%` (double-percent). Zsh prompt expansion treats `%` as a special character, so the zsh version writes `pct_used_prompt = f"{pct_used:.1f}%%"` and `copilot_usage_update` un-escapes with `${prompt_str//\%\%/%}` before displaying. The PowerShell version does not do this escaping; `%%` does not appear in `prompt.txt` on the PS path.
+- `prompt.txt` stores `%%` (double percent) on the Zsh path. Starship generates a zsh prompt string processed by zsh's prompt expansion, which renders `%%` as a literal `%`. The Python write step does `prompt.replace('%', '%%')` to double any `%` in the computed string. `copilot_usage_update` un-escapes with `${prompt_str//\%\%/%}` before displaying. The PowerShell path does not do this doubling (PowerShell prompt strings don't use `%%` escaping).
 - PS5 (Windows PowerShell 5.1) cannot reliably render characters outside the Basic Multilingual Plane, so the prompt hook replaces emoji with ASCII fallbacks: `[G]` `[Y]` `[O]` `[R]` `->` `~`.
 - The Zsh background refresh uses `( _copilot_usage_fetch &>/dev/null & )` (subshell). PowerShell uses `Start-Job`.
 - The PowerShell script uses global guards (`$global:_CopilotSeeded`, `$global:_CopilotPromptInstalled`) so it is safe to dot-source from multiple profile files.

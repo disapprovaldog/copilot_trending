@@ -82,8 +82,7 @@ def compute_usage(raw: dict, now: datetime) -> dict:
         elif pct_used < 90:  icon = "🟠"
         else:                icon = "🔴"
 
-        # %% escaping for zsh prompt rendering (copilot_usage_update un-escapes it)
-        pct_used_prompt = f"{pct_used:.1f}%%"
+        pct_used_prompt = f"{pct_used:.1f}%"
         if biz_elapsed > 0:
             prompt = f"{icon} {used}/{entitlement} ({pct_used_prompt}) ↗ {projected:.0f}"
         else:
