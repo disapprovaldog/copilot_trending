@@ -119,9 +119,9 @@ if quota:
     else:                icon = "\U0001f534"
 
     if biz_elapsed > 0:
-        prompt = f"{icon} {used}/{entitlement} ({pct_used:.0f}%) ↗ {projected:.0f}"
+        prompt = f"{icon} {used}/{entitlement} ({pct_used:.1f}%) ↗ {projected:.0f}"
     else:
-        prompt = f"{icon} {used}/{entitlement} ({pct_used:.0f}%)"
+        prompt = f"{icon} {used}/{entitlement} ({pct_used:.1f}%)"
 
     detail = "\n".join([
         f"Plan             : {plan}",

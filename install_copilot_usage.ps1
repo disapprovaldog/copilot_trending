@@ -91,5 +91,23 @@ style   = "bold cyan"
     Write-Host "  (create $StarshipToml and re-run to add the Starship block)"
 }
 
+$refreshOk = $false
+$previousEap = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    . $CopilotScript
+    $refreshOk = _Copilot-Fetch
+} catch {
+    $refreshOk = $false
+} finally {
+    $ErrorActionPreference = $previousEap
+}
+
+if ($refreshOk) {
+    Write-Host "Refreshed Copilot usage cache"
+} else {
+    Write-Host "Could not refresh Copilot usage cache right now"
+}
+
 Write-Host ""
 Write-Host "Done. Reload your profile with: . `$PROFILE"

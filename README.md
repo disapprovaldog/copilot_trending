@@ -15,13 +15,13 @@ This repo contains sourceable shell scripts (Zsh and PowerShell) that:
 ### PowerShell 7 (emoji)
 
 ```
-🟢 717/12000 (6%) ↗ 11084 PS C:\Users\you>
+🟢 717/12000 (6.0%) ↗ 11084 PS C:\Users\you>
 ```
 
 ### PowerShell 5 (ASCII fallback)
 
 ```
-[G] 717/12000 (6%) -> 11084 PS C:\Users\you>
+[G] 717/12000 (6.0%) -> 11084 PS C:\Users\you>
 ```
 
 | Part | Meaning |
@@ -29,7 +29,7 @@ This repo contains sourceable shell scripts (Zsh and PowerShell) that:
 | `🟢` / `[G]` | Status icon — see colour key below |
 | `717` | Premium interactions used so far this month |
 | `12000` | Monthly entitlement |
-| `(6%)` | Percent of quota consumed |
+| `(6.0%)` | Percent of quota consumed |
 | `↗ 11084` / `-> 11084` | Projected end-of-month total, based on your current pace during business hours |
 
 **Colour key**
