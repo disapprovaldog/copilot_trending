@@ -5,7 +5,7 @@ BeforeAll {
     $global:_CopilotSeeded          = $true
     $global:_CopilotPromptInstalled = $true
 
-    . (Join-Path $PSScriptRoot ".." "copilot_usage.ps1")
+    . (Join-Path (Split-Path $PSScriptRoot -Parent) "copilot_usage.ps1")
 
     $script:TestCacheDir = Join-Path ([System.IO.Path]::GetTempPath()) ("pester_" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $script:TestCacheDir | Out-Null
