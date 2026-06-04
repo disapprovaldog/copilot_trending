@@ -166,7 +166,7 @@ else:
     ])
 
 with open(os.path.join(cache_dir, "prompt.txt"), "w") as fh:
-    fh.write(prompt)
+    fh.write(prompt.replace('%', '%%'))  # %% is literal % in zsh prompt strings
 with open(os.path.join(cache_dir, "detail.txt"), "w") as fh:
     fh.write(detail + "\n")
 PYEOF

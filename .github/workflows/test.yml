@@ -1,0 +1,100 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-linux:
+    name: Python + Zsh + PowerShell (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run Python logic tests
+        run: python -m pytest tests/test_python_logic.py -v
+
+      - name: Install zsh and bats-core
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y zsh
+          npm install -g bats
+
+      - name: Run Zsh tests
+        run: bats tests/test_copilot_usage.bats
+
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -MinimumVersion 5.0.0 -Force -Scope CurrentUser
+
+      - name: Run PowerShell tests (pwsh)
+        shell: pwsh
+        run: |
+          Import-Module Pester -MinimumVersion 5.0.0
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path      = "tests/test_copilot_usage.Tests.ps1"
+          $cfg.Output.Verbosity = "Detailed"
+          $cfg.Run.Exit      = $true
+          Invoke-Pester -Configuration $cfg
+
+  test-windows-ps7:
+    name: PowerShell 7 (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -MinimumVersion 5.0.0 -Force -Scope CurrentUser
+
+      - name: Run PowerShell tests (pwsh)
+        shell: pwsh
+        run: |
+          Import-Module Pester -MinimumVersion 5.0.0
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path         = "tests/test_copilot_usage.Tests.ps1"
+          $cfg.Output.Verbosity = "Detailed"
+          $cfg.Run.Exit         = $true
+          Invoke-Pester -Configuration $cfg
+
+  test-windows-ps5:
+    name: PowerShell 5.1 (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Pester (PS5)
+        shell: powershell
+        run: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          Install-Module Pester -MinimumVersion 5.0.0 -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Run PowerShell tests (powershell 5.1)
+        shell: powershell
+        run: |
+          Import-Module Pester -MinimumVersion 5.0.0
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path         = "tests/test_copilot_usage.Tests.ps1"
+          $cfg.Output.Verbosity = "Detailed"
+          $cfg.Run.Exit         = $true
+          Invoke-Pester -Configuration $cfg
