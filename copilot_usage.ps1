@@ -161,7 +161,7 @@ function _Copilot-Fetch {
     )
 
     if (-not $Python) {
-        Write-Error "copilot_usage: python3/python not found in PATH"
+        Write-Error "copilot_usage: python3/python not found in PATH" -ErrorAction Continue
         return $false
     }
 
@@ -169,7 +169,7 @@ function _Copilot-Fetch {
 
     $token = (gh auth token 2>$null)
     if ($LASTEXITCODE -ne 0 -or -not $token) {
-        Write-Error "copilot_usage: gh not authenticated"
+        Write-Error "copilot_usage: gh not authenticated" -ErrorAction Continue
         return $false
     }
 
@@ -183,7 +183,7 @@ function _Copilot-Fetch {
         $raw = Invoke-RestMethod -Uri "https://api.github.com/copilot_internal/user" `
             -Headers $headers -Method Get
     } catch {
-        Write-Error "copilot_usage: API request failed: $_"
+        Write-Error "copilot_usage: API request failed: $_" -ErrorAction Continue
         return $false
     }
 

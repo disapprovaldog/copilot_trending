@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y zsh
-          npm install -g bats
+          sudo npm install -g bats
 
       - name: Run Zsh tests
         run: bats tests/test_copilot_usage.bats
