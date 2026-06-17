@@ -131,11 +131,11 @@ Describe "Embedded Python script (_CopilotPyScript)" {
 Describe "_Copilot-Fetch" {
     It "returns false when python is not configured" {
         # Empty string triggers the early-exit guard without touching gh or the API.
-        # -ErrorAction Ignore suppresses the Write-Error so Pester does not fail this block.
+        # SilentlyContinue suppresses the Write-Error (Ignore is PS7-only).
         $result = _Copilot-Fetch -CacheDir $script:TestCacheDir `
                                   -Python "" `
                                   -PyScript $global:_CopilotPyScript `
-                                  -ErrorAction Ignore 2>$null
+                                  -ErrorAction SilentlyContinue 2>$null
         $result | Should -Be $false
     }
 }

@@ -167,11 +167,6 @@ function _Copilot-Fetch {
     )
 
     if (-not $Python) {
-        # Re-probe in case Python was installed after this script was dot-sourced
-        $global:_CopilotPython = _Copilot-FindPython
-        $Python = $global:_CopilotPython
-    }
-    if (-not $Python) {
         Write-Error "copilot_usage: python3/python not found in PATH" -ErrorAction Continue
         return $false
     }
@@ -233,6 +228,7 @@ Set-Alias copilot_usage_info Get-CopilotUsageInfo
 # ── public: force a synchronous refresh ──────────────────────────────────────
 function Update-CopilotUsage {
     Write-Host "Fetching GitHub Copilot usage..."
+    if (-not $global:_CopilotPython) { $global:_CopilotPython = _Copilot-FindPython }
     if (_Copilot-Fetch) {
         $promptFile = Join-Path $script:_CopilotCacheDir "prompt.txt"
         if (Test-Path $promptFile) { Get-Content $promptFile -Raw | Write-Host }
@@ -262,6 +258,7 @@ function _Copilot-CheckRefresh {
     }
 
     $cd  = $global:_CopilotCacheDir
+    if (-not $global:_CopilotPython) { $global:_CopilotPython = _Copilot-FindPython }
     $py  = $global:_CopilotPython
     $pys = $global:_CopilotPyScript
 
@@ -307,6 +304,7 @@ $global:_CopilotPromptFile = Join-Path $global:_CopilotCacheDir "prompt.txt"
 if (-not (Test-Path $global:_CopilotPromptFile) -and -not $global:_CopilotSeeded) {
     $global:_CopilotSeeded = $true
     Write-Host "copilot_usage: seeding cache..." -NoNewline
+    if (-not $global:_CopilotPython) { $global:_CopilotPython = _Copilot-FindPython }
     if (_Copilot-Fetch) {
         Write-Host " done"
     } else {
