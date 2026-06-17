@@ -25,13 +25,18 @@ $global:_CopilotCacheDir    = Join-Path (Join-Path $HOME ".cache") "copilot_usag
 $global:_CopilotRefreshSecs = 300
 $global:_CopilotJobId       = $null
 $global:_CopilotPython      = $null
-foreach ($_pyCandidate in @('python3', 'python', 'py')) {
-    if (Get-Command $_pyCandidate -ErrorAction SilentlyContinue) {
-        $testOut = & $_pyCandidate -c "print('ok')" 2>&1
-        if ("$testOut" -match 'ok') { $global:_CopilotPython = $_pyCandidate; break }
+
+function _Copilot-FindPython {
+    foreach ($cmd in @('python3', 'python', 'py')) {
+        if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) { continue }
+        $out = $null
+        try { $out = & $cmd -c "print('ok')" 2>&1 } catch { }
+        if ($LASTEXITCODE -eq 0 -and "$out" -match 'ok') { return $cmd }
     }
+    return $null
 }
-Remove-Variable _pyCandidate -ErrorAction SilentlyContinue
+
+$global:_CopilotPython = _Copilot-FindPython
 
 # ── embedded Python — same computation logic as the zsh version ─────────────
 $global:_CopilotPyScript = @'
@@ -119,7 +124,7 @@ if quota:
     else:                icon = "\U0001f534"
 
     if biz_elapsed > 0:
-        prompt = f"{icon} {used}/{entitlement} ({pct_used:.1f}%) ↗ {projected:.0f}"
+        prompt = f"{icon} {used}/{entitlement} ({pct_used:.1f}%) \u2197 {projected:.0f}"
     else:
         prompt = f"{icon} {used}/{entitlement} ({pct_used:.1f}%)"
 
@@ -138,7 +143,7 @@ if quota:
         f"Quota resets     : {reset_str}",
     ])
 else:
-    icon   = "♾️ "
+    icon   = "\u267e\ufe0f"
     prompt = f"{icon} {plan} (unlimited)"
     detail = "\n".join([
         f"Plan             : {plan}",
@@ -223,6 +228,7 @@ Set-Alias copilot_usage_info Get-CopilotUsageInfo
 # ── public: force a synchronous refresh ──────────────────────────────────────
 function Update-CopilotUsage {
     Write-Host "Fetching GitHub Copilot usage..."
+    if (-not $global:_CopilotPython) { $global:_CopilotPython = _Copilot-FindPython }
     if (_Copilot-Fetch) {
         $promptFile = Join-Path $script:_CopilotCacheDir "prompt.txt"
         if (Test-Path $promptFile) { Get-Content $promptFile -Raw | Write-Host }
@@ -252,6 +258,7 @@ function _Copilot-CheckRefresh {
     }
 
     $cd  = $global:_CopilotCacheDir
+    if (-not $global:_CopilotPython) { $global:_CopilotPython = _Copilot-FindPython }
     $py  = $global:_CopilotPython
     $pys = $global:_CopilotPyScript
 
@@ -297,6 +304,7 @@ $global:_CopilotPromptFile = Join-Path $global:_CopilotCacheDir "prompt.txt"
 if (-not (Test-Path $global:_CopilotPromptFile) -and -not $global:_CopilotSeeded) {
     $global:_CopilotSeeded = $true
     Write-Host "copilot_usage: seeding cache..." -NoNewline
+    if (-not $global:_CopilotPython) { $global:_CopilotPython = _Copilot-FindPython }
     if (_Copilot-Fetch) {
         Write-Host " done"
     } else {
@@ -330,7 +338,13 @@ if (-not $global:_CopilotPromptInstalled) {
             _Copilot-CheckRefresh
             $status = if (Test-Path $global:_CopilotPromptFile) {
                 $s = (Get-Content $global:_CopilotPromptFile -Raw -Encoding UTF8).Trim()
-                if ($PSVersionTable.PSVersion.Major -lt 7) {
+                # Use ASCII fallbacks when the console can't render Unicode:
+                # always on PS5, and on PS7 when not in Windows Terminal and output
+                # encoding isn't UTF-8 (code page 65001).
+                $needsAscii = ($PSVersionTable.PSVersion.Major -lt 7) -or
+                              (-not $env:WT_SESSION -and
+                               [Console]::OutputEncoding.CodePage -ne 65001)
+                if ($needsAscii) {
                     $s = $s.Replace([char]::ConvertFromUtf32(0x1F7E2), '[G]').
                             Replace([char]::ConvertFromUtf32(0x1F7E1), '[Y]').
                             Replace([char]::ConvertFromUtf32(0x1F7E0), '[O]').

@@ -17,6 +17,105 @@ if (-not (Test-Path $CopilotScript)) {
     exit 1
 }
 
+# ── Python check ─────────────────────────────────────────────────────────────
+function Find-Python {
+    foreach ($cmd in @('python3', 'python', 'py')) {
+        if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) { continue }
+        # Probe version; suppress errors so the Windows Store stub doesn't throw
+        $ver = $null
+        try {
+            $ver = & $cmd --version 2>&1
+        } catch { }
+        # Store stub exits non-zero and prints to stderr — real Python prints "Python 3.x.y"
+        if ($LASTEXITCODE -eq 0 -and "$ver" -match 'Python \d') { return $cmd }
+    }
+    return $null
+}
+
+$pythonCmd = Find-Python
+if (-not $pythonCmd) {
+    Write-Host ""
+    Write-Host "⚠  Python 3 was not found in PATH." -ForegroundColor Yellow
+    Write-Host "   copilot_usage.ps1 requires Python 3 to compute quota metrics." -ForegroundColor Yellow
+    Write-Host ""
+
+    # Detect available installers
+    $hasWinget  = [bool](Get-Command winget  -ErrorAction SilentlyContinue)
+    $hasChoco   = [bool](Get-Command choco   -ErrorAction SilentlyContinue)
+    $hasPy      = [bool](Get-Command py      -ErrorAction SilentlyContinue)  # Python Launcher w/o python on PATH
+
+    $options = [System.Collections.Generic.List[string]]::new()
+    if ($hasWinget) { $options.Add("winget  — install via Windows Package Manager (latest Python.Python.3.x)") }
+    if ($hasChoco)  { $options.Add("choco   — install via Chocolatey (choco install python)") }
+    $options.Add("store   — open the Microsoft Store Python 3 page")
+    $options.Add("manual  — open python.org download page in your browser")
+    $options.Add("skip    — continue without installing Python (cache refresh will fail)")
+
+    Write-Host "How would you like to install Python?" -ForegroundColor Cyan
+    for ($i = 0; $i -lt $options.Count; $i++) {
+        Write-Host "  [$($i+1)] $($options[$i])"
+    }
+    Write-Host ""
+
+    $choice = Read-Host "Enter a number (default: skip)"
+
+    $idx = 0
+    [void][int]::TryParse($choice.Trim(), [ref]$idx)
+
+    $label = if ($idx -ge 1 -and $idx -le $options.Count) { ($options[$idx - 1] -split '\s+')[0] } else { "skip" }
+
+    switch ($label) {
+        "winget" {
+            # Find the latest versioned Python.Python.3.x package available in winget
+            Write-Host "Searching winget for Python 3…" -ForegroundColor Cyan
+            $searchLines = winget search --id Python.Python --source winget --accept-source-agreements 2>&1
+            $pkgId = $searchLines |
+                Select-String 'Python\.Python\.3\.\d+' |
+                ForEach-Object { $_.Matches[0].Value } |
+                Sort-Object -Descending |
+                Select-Object -First 1
+            if (-not $pkgId) { $pkgId = 'Python.Python.3.13' }  # sensible fallback
+            Write-Host "Running: winget install --id $pkgId --source winget -e" -ForegroundColor Cyan
+            winget install --id $pkgId --source winget -e --accept-package-agreements --accept-source-agreements
+            # Refresh PATH in this session
+            $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' +
+                        [System.Environment]::GetEnvironmentVariable('PATH', 'User')
+            $pythonCmd = Find-Python
+            if ($pythonCmd) {
+                Write-Host "Python installed and found as '$pythonCmd'." -ForegroundColor Green
+            } else {
+                Write-Host "Installation finished. You may need to restart your shell for PATH to update." -ForegroundColor Yellow
+            }
+        }
+        "choco" {
+            Write-Host "Running: choco install python -y" -ForegroundColor Cyan
+            choco install python -y
+            $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' +
+                        [System.Environment]::GetEnvironmentVariable('PATH', 'User')
+            $pythonCmd = Find-Python
+            if ($pythonCmd) {
+                Write-Host "Python installed and found as '$pythonCmd'." -ForegroundColor Green
+            } else {
+                Write-Host "Installation finished. You may need to restart your shell for PATH to update." -ForegroundColor Yellow
+            }
+        }
+        "store" {
+            Write-Host "Opening Microsoft Store…" -ForegroundColor Cyan
+            Start-Process "ms-windows-store://pdp/?productid=9NRWMJLIVE9S"
+            Write-Host "Re-run this installer after Python is installed." -ForegroundColor Yellow
+        }
+        "manual" {
+            Write-Host "Opening https://www.python.org/downloads/ in your browser…" -ForegroundColor Cyan
+            Start-Process "https://www.python.org/downloads/"
+            Write-Host "Re-run this installer after Python is installed." -ForegroundColor Yellow
+        }
+        default {
+            Write-Host "Skipping Python installation — cache refresh will fail until Python 3 is available." -ForegroundColor Yellow
+        }
+    }
+    Write-Host ""
+}
+
 # ── PowerShell profile ───────────────────────────────────────────────────────
 $ProfilePath = $PROFILE.CurrentUserAllHosts
 if (-not (Test-Path $ProfilePath)) {
