@@ -139,7 +139,7 @@ elif sess_pct < 75: icon = "🟡"
 elif sess_pct < 90: icon = "🟠"
 else:               icon = "🔴"
 
-prompt = (f"{icon} {sess_pct:.0f}%%/{week_pct:.0f}%%/"
+prompt = (f"{icon} {sess_pct:.0f}%/{week_pct:.0f}%/"
           f"${week_cost:.2f}/${weekly_budget:.0f}")
 
 detail_lines = [
